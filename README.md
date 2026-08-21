@@ -37,7 +37,10 @@ routers only, with no tables, so the codebase boundary is ready for that phase.
 Two deployables, and they are independent:
 
 **The demo** — the frontend alone, on sample data, which is what you host to show
-someone. `VITE_DEMO_MODE=true` makes the app serve its own API from
+someone. Products carry their own illustrations
+([`frontend/public/products/`](frontend/public/products/)): flat SVG, a couple of
+KB each, nothing licensed and nothing that loads slowly. Swap in real photography
+by replacing a file of the same name. `VITE_DEMO_MODE=true` makes the app serve its own API from
 [`frontend/src/api/demo/`](frontend/src/api/demo/): the same catalogue the real
 backend seeds, with the real rules running (minimum order quantities, cycle
 resolution at checkout, the mock payment round trip, cycle-close aggregation) and

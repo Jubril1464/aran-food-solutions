@@ -72,7 +72,8 @@ function product(
   unit: string,
   price: string,
   moq: string,
-  description: string
+  description: string,
+  image: string
 ): Product {
   return {
     id,
@@ -84,31 +85,34 @@ function product(
     price,
     minimum_order_quantity: moq,
     is_available: true,
-    image_url: null,
+    // Served from frontend/public/products/. A root-relative path, so it
+    // resolves against whichever origin the app is on - and works unchanged when
+    // these products come from the real API instead.
+    image_url: `/products/${image}.svg`,
     procurement_cycle_id: null,
   };
 }
 
 const products: Product[] = [
   product("p-rice", ID.grains, "Long Grain Rice (50kg bag)", "bag", "85000.00", "1.00",
-    "Parboiled long grain rice, 50kg bag. Pooled directly from mill-level bulk purchase."),
+    "Parboiled long grain rice, 50kg bag. Pooled directly from mill-level bulk purchase.", "rice"),
   // Deliberately above 1, so the minimum-order rule is visible in a demo.
   product("p-maize", ID.grains, "Yellow Maize (100kg bag)", "bag", "62000.00", "2.00",
-    "Dried yellow maize, 100kg bag. Minimum two bags per order at this tier."),
+    "Dried yellow maize, 100kg bag. Minimum two bags per order at this tier.", "maize"),
   product("p-millet", ID.grains, "Millet (50kg bag)", "bag", "48000.00", "1.00",
-    "Cleaned millet, 50kg bag."),
+    "Cleaned millet, 50kg bag.", "millet"),
   product("p-beans", ID.legumes, "Brown Beans (50kg bag)", "bag", "97000.00", "1.00",
-    "Oloyin brown beans, 50kg bag, hand-sorted."),
+    "Oloyin brown beans, 50kg bag, hand-sorted.", "beans"),
   product("p-groundnut", ID.legumes, "Groundnuts (25kg bag)", "bag", "41000.00", "1.00",
-    "Raw shelled groundnuts, 25kg bag."),
+    "Raw shelled groundnuts, 25kg bag.", "groundnuts"),
   product("p-garri", ID.tubers, "White Garri (50kg bag)", "bag", "43000.00", "1.00",
-    "Fine white garri, 50kg bag."),
+    "Fine white garri, 50kg bag.", "garri"),
   product("p-elubo", ID.tubers, "Yam Flour / Elubo (25kg bag)", "bag", "38000.00", "1.00",
-    "Stone-milled yam flour, 25kg bag."),
+    "Stone-milled yam flour, 25kg bag.", "elubo"),
   product("p-palm-oil", ID.oils, "Palm Oil (25 litre keg)", "keg", "52000.00", "1.00",
-    "Unrefined red palm oil, 25 litre keg."),
+    "Unrefined red palm oil, 25 litre keg.", "palm-oil"),
   product("p-groundnut-oil", ID.oils, "Groundnut Oil (25 litre keg)", "keg", "64000.00", "1.00",
-    "Filtered groundnut oil, 25 litre keg."),
+    "Filtered groundnut oil, 25 litre keg.", "groundnut-oil"),
 ];
 
 function cycle(id: string, categoryId: string, name: string): ProcurementCycle {

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300" role="img" aria-label="Sack of yam flour">
+  <rect width="400" height="300" fill="#f7f3ec"/>
+  <ellipse cx="200" cy="254" rx="98" ry="13" fill="#000" opacity=".07"/>
+  <!-- body -->
+  <path d="M139 122 C126 156 122 200 131 228 C138 246 169 252 200 252 C231 252 262 246 269 228 C278 200 274 156 261 122 Z" fill="#ded0b6"/>
+  <!-- shaded sides, for a bit of volume -->
+  <path d="M139 122 C126 156 122 200 131 228 C136 240 150 247 166 250 C150 214 148 162 156 122 Z" fill="#bcaa8c" opacity=".55"/>
+  <path d="M261 122 C274 156 278 200 269 228 C264 240 250 247 234 250 C250 214 252 162 244 122 Z" fill="#bcaa8c" opacity=".35"/>
+  <!-- gathered neck -->
+  <path d="M158 122 L166 100 L234 100 L242 122 Z" fill="#ded0b6"/>
+  <path d="M158 122 L166 100 L182 100 L172 122 Z" fill="#bcaa8c" opacity=".45"/>
+  <!-- contents at the opening -->
+  <ellipse cx="200" cy="100" rx="34" ry="11" fill="#a98a5c"/>
+  <ellipse cx="200" cy="98" rx="29" ry="8.5" fill="#cdae7f"/>
+  <!-- tie band -->
+  <rect x="152" y="116" width="96" height="15" rx="7.5" fill="#7f6743"/>
+  <line x1="160" y1="123.5" x2="240" y2="123.5" stroke="#fff" stroke-width="1.4" stroke-dasharray="5 5" opacity=".5"/>
+  <path d="M104 250 C110 232 122 224 134 224 C146 224 158 232 164 250 Z" fill="#cdae7f"/>
+  <path d="M104 250 C110 232 122 224 134 224 C130 232 126 240 124 250 Z" fill="#a98a5c" opacity=".35"/>
+  <ellipse cx="134" cy="250" rx="30" ry="4" fill="#cdae7f"/>
+  <ellipse cx="278" cy="247" rx="6" ry="2.6" fill="#cdae7f"/>
+  <ellipse cx="290" cy="243" rx="4" ry="2" fill="#cdae7f" opacity=".8"/>
+  <ellipse cx="268" cy="242" rx="3" ry="1.6" fill="#cdae7f" opacity=".6"/>
+</svg>

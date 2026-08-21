@@ -17,7 +17,10 @@ browser's localStorage. It is not a set of static screenshots: the real rules
 run, so a walkthrough behaves like the product.
 
 - The catalogue is the same 9 products, 4 categories and 4 open procurement
-  cycles the real backend seeds.
+  cycles the real backend seeds, each with its own illustration
+  (`frontend/public/products/`) — flat SVG rather than stock photography, so
+  there is nothing to license and nothing that loads slowly. Replace any of them
+  with a real photograph by dropping a file of the same name in that folder.
 - **Minimum order quantities are enforced** — try adding one bag of Yellow Maize.
 - Checkout resolves an open procurement cycle per line, exactly as the backend
   does, and refuses if there isn't one.

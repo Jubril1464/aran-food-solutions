@@ -54,6 +54,7 @@ DEMO_CATALOGUE: list[dict] = [
         "products": [
             {
                 "name": "Long Grain Rice (50kg bag)",
+                "image": "rice",
                 "unit": "bag",
                 "price": Decimal("85000.00"),
                 "minimum_order_quantity": Decimal("1"),
@@ -61,6 +62,7 @@ DEMO_CATALOGUE: list[dict] = [
             },
             {
                 "name": "Yellow Maize (100kg bag)",
+                "image": "maize",
                 "unit": "bag",
                 "price": Decimal("62000.00"),
                 "minimum_order_quantity": Decimal("2"),
@@ -68,6 +70,7 @@ DEMO_CATALOGUE: list[dict] = [
             },
             {
                 "name": "Millet (50kg bag)",
+                "image": "millet",
                 "unit": "bag",
                 "price": Decimal("48000.00"),
                 "minimum_order_quantity": Decimal("1"),
@@ -81,6 +84,7 @@ DEMO_CATALOGUE: list[dict] = [
         "products": [
             {
                 "name": "Brown Beans (50kg bag)",
+                "image": "beans",
                 "unit": "bag",
                 "price": Decimal("97000.00"),
                 "minimum_order_quantity": Decimal("1"),
@@ -88,6 +92,7 @@ DEMO_CATALOGUE: list[dict] = [
             },
             {
                 "name": "Groundnuts (25kg bag)",
+                "image": "groundnuts",
                 "unit": "bag",
                 "price": Decimal("41000.00"),
                 "minimum_order_quantity": Decimal("1"),
@@ -101,6 +106,7 @@ DEMO_CATALOGUE: list[dict] = [
         "products": [
             {
                 "name": "White Garri (50kg bag)",
+                "image": "garri",
                 "unit": "bag",
                 "price": Decimal("43000.00"),
                 "minimum_order_quantity": Decimal("1"),
@@ -108,6 +114,7 @@ DEMO_CATALOGUE: list[dict] = [
             },
             {
                 "name": "Yam Flour / Elubo (25kg bag)",
+                "image": "elubo",
                 "unit": "bag",
                 "price": Decimal("38000.00"),
                 "minimum_order_quantity": Decimal("1"),
@@ -121,6 +128,7 @@ DEMO_CATALOGUE: list[dict] = [
         "products": [
             {
                 "name": "Palm Oil (25 litre keg)",
+                "image": "palm-oil",
                 "unit": "keg",
                 "price": Decimal("52000.00"),
                 "minimum_order_quantity": Decimal("1"),
@@ -128,6 +136,7 @@ DEMO_CATALOGUE: list[dict] = [
             },
             {
                 "name": "Groundnut Oil (25 litre keg)",
+                "image": "groundnut-oil",
                 "unit": "keg",
                 "price": Decimal("64000.00"),
                 "minimum_order_quantity": Decimal("1"),
@@ -207,6 +216,10 @@ async def _seed_catalogue(db) -> dict:
                     price=spec["price"],
                     minimum_order_quantity=spec["minimum_order_quantity"],
                     is_available=True,
+                    # Root-relative, resolved against the frontend's own origin -
+                    # these illustrations ship with the frontend
+                    # (frontend/public/products/), not with the API.
+                    image_url=f"/products/{spec['image']}.svg",
                     # Left unpinned on purpose: an unpinned product resolves the
                     # open cycle for its *category* at checkout, which is the
                     # common path (see get_active_cycle_for_product).

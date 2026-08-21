@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300" role="img" aria-label="Keg of palm oil">
+  <rect width="400" height="300" fill="#f9f1ec"/>
+  <ellipse cx="200" cy="254" rx="86" ry="12" fill="#000" opacity=".07"/>
+  <!-- body -->
+  <rect x="141" y="92" width="118" height="160" rx="20" fill="#d9542a"/>
+  <path d="M141 112 L141 232 A20 20 0 0 0 161 252 L180 252 L180 92 L161 92 A20 20 0 0 0 141 112 Z" fill="#a53c1c" opacity=".45"/>
+  <!-- shoulder and neck -->
+  <path d="M158 92 L166 70 L216 70 L224 92 Z" fill="#d9542a"/>
+  <path d="M158 92 L166 70 L180 70 L172 92 Z" fill="#a53c1c" opacity=".45"/>
+  <rect x="176" y="56" width="34" height="18" rx="5" fill="#6f2a12"/>
+  <!-- carry handle -->
+  <path d="M224 80 C252 80 262 96 262 112 C262 126 252 136 238 136" fill="none" stroke="#a53c1c" stroke-width="11" stroke-linecap="round"/>
+  <!-- label -->
+  <rect x="152" y="150" width="96" height="52" rx="6" fill="#fff" opacity=".9"/>
+  <rect x="163" y="163" width="74" height="7" rx="3.5" fill="#a53c1c" opacity=".75"/>
+  <rect x="163" y="176" width="52" height="6" rx="3" fill="#a53c1c" opacity=".45"/>
+  <rect x="163" y="187" width="38" height="6" rx="3" fill="#a53c1c" opacity=".3"/>
+  <!-- level window -->
+  <rect x="230" y="150" width="12" height="52" rx="6" fill="#fff" opacity=".35"/>
+  <rect x="230" y="166" width="12" height="36" rx="6" fill="#6f2a12" opacity=".55"/>
+</svg>
