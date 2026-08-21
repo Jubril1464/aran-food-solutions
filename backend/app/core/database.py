@@ -32,17 +32,40 @@ def normalize_database_url(url: str) -> tuple[str, bool]:
         url = "postgresql+asyncpg://" + url[len("postgresql://") :]
 
     parts = urlsplit(url)
-    if not parts.query:
-        return url, False
-
     kept: list[tuple[str, str]] = []
     ssl_requested = False
+    changed = False
     for key, value in parse_qsl(parts.query, keep_blank_values=True):
         if key.lower() in _LIBPQ_ONLY_PARAMS:
             if key.lower() == "sslmode" and value.lower() in {"require", "verify-ca", "verify-full", "prefer"}:
                 ssl_requested = True
+            changed = True
             continue
         kept.append((key, value))
+
+    # A connection-pooler endpoint (Neon and Supabase both signal one in the
+    # hostname) fronts Postgres with pgbouncer in transaction pooling mode, where
+    # consecutive statements can land on different server connections. SQLAlchemy's
+    # asyncpg dialect caches prepared statements per connection, and a cached one
+    # is gone the moment the server connection changes - which surfaces as
+    # `prepared statement "__asyncpg_stmt_1__" does not exist` under load rather
+    # than at startup, making it a genuinely nasty thing to debug.
+    #
+    # Disabling that cache is the documented fix. Applied automatically because
+    # the pooled string is the one these dashboards show by default, so pasting it
+    # is the likely thing to do, not the exceptional one.
+    host = parts.hostname or ""
+    if ("-pooler." in host or ".pooler." in host) and not any(
+        key == "prepared_statement_cache_size" for key, _ in kept
+    ):
+        kept.append(("prepared_statement_cache_size", "0"))
+        changed = True
+
+    if not changed:
+        # Returned untouched rather than rebuilt, because urlunsplit() collapses
+        # the empty authority in a URL like `sqlite+aiosqlite:///./dev.db` down to
+        # `sqlite+aiosqlite:/./dev.db`, which SQLAlchemy then refuses to parse.
+        return url, ssl_requested
 
     return urlunsplit(parts._replace(query=urlencode(kept))), ssl_requested
 

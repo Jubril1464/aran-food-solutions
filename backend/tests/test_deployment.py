@@ -56,6 +56,31 @@ def test_unrelated_query_parameters_are_preserved():
     assert ssl_requested is True
 
 
+def test_pooled_endpoint_disables_the_prepared_statement_cache():
+    """A pooler endpoint puts pgbouncer in front of Postgres in transaction mode,
+    where a cached prepared statement disappears when the server connection
+    rotates - failing under load, not at startup."""
+    url, _ = normalize_database_url(
+        "postgresql://u:p@ep-cool-name-123456-pooler.eu-central-1.aws.neon.tech/agric?sslmode=require"
+    )
+    assert url.endswith("?prepared_statement_cache_size=0"), url
+
+
+def test_direct_endpoint_keeps_the_cache():
+    url, _ = normalize_database_url(
+        "postgresql://u:p@ep-cool-name-123456.eu-central-1.aws.neon.tech/agric?sslmode=require"
+    )
+    assert "prepared_statement_cache_size" not in url, url
+
+
+def test_an_explicit_cache_setting_is_not_overridden():
+    url, _ = normalize_database_url(
+        "postgresql://u:p@ep-x-pooler.aws.neon.tech/db?prepared_statement_cache_size=50"
+    )
+    assert url.count("prepared_statement_cache_size") == 1
+    assert "prepared_statement_cache_size=50" in url
+
+
 def test_sqlite_and_already_async_urls_are_left_alone():
     assert normalize_database_url("sqlite+aiosqlite:///./dev.db") == ("sqlite+aiosqlite:///./dev.db", False)
     assert normalize_database_url("postgresql+asyncpg://u:p@host/db") == ("postgresql+asyncpg://u:p@host/db", False)

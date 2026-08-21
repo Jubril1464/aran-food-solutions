@@ -69,6 +69,13 @@ The app rewrites it for its async driver and strips the parameters asyncpg
 doesn't accept — hand-editing it is the usual cause of a confusing
 `connect() got an unexpected keyword argument 'sslmode'` on first boot.
 
+Either of Neon's two endpoints works. The **direct** one (no `-pooler` in the
+hostname) is the better fit here, because the app maintains its own small
+connection pool. If you use the **pooled** one, the app detects it and disables
+its prepared-statement cache automatically — without that, pgbouncer's
+transaction pooling produces `prepared statement "__asyncpg_stmt_1__" does not
+exist` errors under load rather than at startup.
+
 ## Step 3 — Create both services on Render (10 min)
 
 1. Sign up at [render.com](https://render.com) with GitHub — no card for the
