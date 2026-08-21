@@ -1,0 +1,39 @@
+# Runtime dependencies for the AWS Lambda deployment ONLY.
+#
+# Deliberately a subset of requirements.txt, not a second source of truth: every
+# pin here must match requirements.txt exactly, and
+# tests/test_lambda_requirements.py fails the build if they ever drift.
+#
+# Excluded on purpose, with the reason:
+#   uvicorn[standard]  - the ASGI server. Lambda invokes the app through Mangum;
+#                        there is no server process. (~10 MB with its extras.)
+#   arq, redis         - the local/docker-compose notification queue. On Lambda
+#                        the queue is SQS, and app/core/queue.py only imports arq
+#                        lazily inside the Redis code path, so it is never
+#                        imported here.
+#   boto3              - already present in the Lambda Python runtime. Bundling
+#                        it would add ~90 MB unzipped (botocore's service JSON)
+#                        for no functional gain. See the note in infra/DEPLOY.md
+#                        about pinning it if the runtime's version ever matters.
+#   pytest, pytest-asyncio, aiosqlite
+#                      - test-only.
+#
+# Keep this list alphabetical-ish by role, matching requirements.txt's order, so
+# a diff between the two files is readable.
+
+fastapi==0.141.1
+sqlalchemy==2.0.52
+asyncpg==0.31.0
+alembic==1.19.1
+pydantic==2.13.4
+pydantic-settings==2.15.0
+email-validator==2.3.0
+bcrypt==5.0.0
+pyjwt==2.13.0
+python-multipart==0.0.32
+httpx==0.28.1
+slowapi==0.1.10
+mangum==0.21.0
+aiosmtplib==5.1.2
+structlog==26.1.0
+greenlet==3.5.5

@@ -1,0 +1,15 @@
+# Copy to terraform.tfvars and fill in real values, or pass as -var flags.
+# NEVER commit terraform.tfvars itself (it's gitignored) — it holds secrets.
+
+aws_region = "eu-west-1"
+
+# Leave blank to run in the app's built-in Paystack mock mode (safe default —
+# checkout/payment still works end-to-end without a real Paystack account).
+paystack_secret_key = ""
+
+# Leave email_backend = "console" (the default) to have notifications logged
+# instead of sent, until you have real SMTP credentials.
+email_backend = "console"
+smtp_host     = ""
+smtp_username = ""
+smtp_password = ""
