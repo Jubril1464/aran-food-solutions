@@ -16,7 +16,7 @@ async def _get_user_id(email: str) -> str:
         return str(user.id)
 
 
-async def _register_and_verify(client, email="customer@agric-mvp-test.com", password="customerpass123"):
+async def _register_and_verify(client, email="customer@aranfood-mvp-test.com", password="customerpass123"):
     resp = await client.post(
         f"{API}/auth/register",
         json={
@@ -88,20 +88,20 @@ async def test_register_login_reset_round_trip(client):
     assert me.status_code == 200
     assert me.json()["is_verified"] is True
 
-    reset_req = await client.post(f"{API}/auth/password-reset/request", json={"email": "customer@agric-mvp-test.com"})
+    reset_req = await client.post(f"{API}/auth/password-reset/request", json={"email": "customer@aranfood-mvp-test.com"})
     assert reset_req.status_code == 204
 
-    user_id = await _get_user_id("customer@agric-mvp-test.com")
+    user_id = await _get_user_id("customer@aranfood-mvp-test.com")
     reset_token = create_password_reset_token(user_id)
     confirm = await client.post(
         f"{API}/auth/password-reset/confirm", json={"token": reset_token, "new_password": "newpassword456"}
     )
     assert confirm.status_code == 204
 
-    old_login = await client.post(f"{API}/auth/login", json={"email": "customer@agric-mvp-test.com", "password": "customerpass123"})
+    old_login = await client.post(f"{API}/auth/login", json={"email": "customer@aranfood-mvp-test.com", "password": "customerpass123"})
     assert old_login.status_code == 401
 
-    new_login = await client.post(f"{API}/auth/login", json={"email": "customer@agric-mvp-test.com", "password": "newpassword456"})
+    new_login = await client.post(f"{API}/auth/login", json={"email": "customer@aranfood-mvp-test.com", "password": "newpassword456"})
     assert new_login.status_code == 200
 
 

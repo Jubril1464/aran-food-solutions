@@ -1,7 +1,7 @@
 import os
 import uuid
 
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test_agric.db"
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test_aranfood.db"
 os.environ["JWT_SECRET"] = "test-secret-key-for-pytest-only-not-for-prod-use"
 os.environ["PAYSTACK_SECRET_KEY"] = ""  # forces PaystackClient mock mode
 
@@ -67,7 +67,7 @@ async def admin_user():
         user = User(
             full_name="Admin User",
             phone_number=f"+234{uuid.uuid4().int % 10**10:010d}",
-            email="admin@agric-mvp-test.com",
+            email="admin@aranfood-mvp-test.com",
             password_hash=hash_password("adminpass123"),
             role=UserRole.ADMIN,
             is_verified=True,
@@ -80,6 +80,6 @@ async def admin_user():
 
 @pytest_asyncio.fixture
 async def admin_token(client, admin_user):
-    resp = await client.post("/api/v1/auth/login", json={"email": "admin@agric-mvp-test.com", "password": "adminpass123"})
+    resp = await client.post("/api/v1/auth/login", json={"email": "admin@aranfood-mvp-test.com", "password": "adminpass123"})
     assert resp.status_code == 200, resp.text
     return resp.json()["access_token"]

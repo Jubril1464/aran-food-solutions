@@ -36,10 +36,10 @@ def test_neon_style_url_is_made_asyncpg_safe():
     deploy, which makes it a particularly annoying way to fail.
     """
     url, ssl_requested = normalize_database_url(
-        "postgresql://user:pw@ep-cool-name-123456.eu-central-1.aws.neon.tech/agric"
+        "postgresql://user:pw@ep-cool-name-123456.eu-central-1.aws.neon.tech/aranfood"
         "?sslmode=require&channel_binding=require"
     )
-    assert url == "postgresql+asyncpg://user:pw@ep-cool-name-123456.eu-central-1.aws.neon.tech/agric"
+    assert url == "postgresql+asyncpg://user:pw@ep-cool-name-123456.eu-central-1.aws.neon.tech/aranfood"
     assert ssl_requested is True
 
 
@@ -50,9 +50,9 @@ def test_legacy_postgres_scheme_is_upgraded():
 
 def test_unrelated_query_parameters_are_preserved():
     url, ssl_requested = normalize_database_url(
-        "postgresql://u:p@host/db?sslmode=require&application_name=agric"
+        "postgresql://u:p@host/db?sslmode=require&application_name=aranfood"
     )
-    assert url == "postgresql+asyncpg://u:p@host/db?application_name=agric"
+    assert url == "postgresql+asyncpg://u:p@host/db?application_name=aranfood"
     assert ssl_requested is True
 
 
@@ -61,14 +61,14 @@ def test_pooled_endpoint_disables_the_prepared_statement_cache():
     where a cached prepared statement disappears when the server connection
     rotates - failing under load, not at startup."""
     url, _ = normalize_database_url(
-        "postgresql://u:p@ep-cool-name-123456-pooler.eu-central-1.aws.neon.tech/agric?sslmode=require"
+        "postgresql://u:p@ep-cool-name-123456-pooler.eu-central-1.aws.neon.tech/aranfood?sslmode=require"
     )
     assert url.endswith("?prepared_statement_cache_size=0"), url
 
 
 def test_direct_endpoint_keeps_the_cache():
     url, _ = normalize_database_url(
-        "postgresql://u:p@ep-cool-name-123456.eu-central-1.aws.neon.tech/agric?sslmode=require"
+        "postgresql://u:p@ep-cool-name-123456.eu-central-1.aws.neon.tech/aranfood?sslmode=require"
     )
     assert "prepared_statement_cache_size" not in url, url
 
@@ -100,7 +100,7 @@ async def test_seeded_admin_can_actually_log_in(client, monkeypatch):
     """Regression: the seeded admin address must survive request validation.
 
     The seed writes the user straight through the model, bypassing pydantic - so
-    an address like `admin@agric.local` seeds happily and is then rejected by
+    an address like `admin@aranfood.local` seeds happily and is then rejected by
     LoginRequest's EmailStr (`.local` is an RFC 6761 special-use name). The result
     is an admin account that exists and can never log in, with a 422 that says
     nothing about the real cause. Nothing else in the suite would catch it.
@@ -169,7 +169,7 @@ async def test_registration_notification_is_delivered_in_the_background(client, 
         "/api/v1/auth/register",
         json={
             "full_name": "Background Delivery",
-            "email": "background@agric-mvp-test.com",
+            "email": "background@aranfood-mvp-test.com",
             "phone_number": "+2348090000001",
             "password": "supersecret123",
             "street": "1 Test Road",
@@ -195,7 +195,7 @@ async def test_pending_notifications_are_redelivered_on_startup(real_in_process_
         user = User(
             full_name="Sweep Target",
             phone_number="+2348090000002",
-            email="sweep@agric-mvp-test.com",
+            email="sweep@aranfood-mvp-test.com",
             password_hash="x",
             is_verified=True,
         )
@@ -223,7 +223,7 @@ async def test_already_sent_notifications_are_not_redelivered(real_in_process_qu
         user = User(
             full_name="Done Already",
             phone_number="+2348090000003",
-            email="done@agric-mvp-test.com",
+            email="done@aranfood-mvp-test.com",
             password_hash="x",
             is_verified=True,
         )

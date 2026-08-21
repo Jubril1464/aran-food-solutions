@@ -17,7 +17,7 @@ export function Navbar() {
     <header className="border-b border-stone-200 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Link to="/" className="text-lg font-bold text-brand-700">
-          Agric Procure
+          Aran Food Solutions
         </Link>
         <nav className="flex items-center gap-1">
           <NavLink to="/" className={navLinkClass} end>

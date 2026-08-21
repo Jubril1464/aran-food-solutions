@@ -1,4 +1,4 @@
-# Deploying Agric (Render + Neon)
+# Deploying Aran Food Solutions (Render + Neon)
 
 The whole app runs on **two free Render services and one free Neon Postgres**.
 No Docker, no container registry, no credit card, and nothing to install beyond
@@ -36,7 +36,7 @@ would matter for real traffic:
 Render deploys from a git repository, so it needs one.
 
 ```bash
-cd /c/Users/lukma/agric
+cd /c/Users/lukma/aranfood
 git add -A
 git commit -m "Deploy to Render"
 ```
@@ -44,7 +44,7 @@ git commit -m "Deploy to Render"
 Create an empty repository on GitHub (no README, no .gitignore), then:
 
 ```bash
-git remote add origin https://github.com/<your-username>/agric.git
+git remote add origin https://github.com/<your-username>/aranfood.git
 git branch -M main
 git push -u origin main
 ```
@@ -56,12 +56,12 @@ prefer — Render works with both.
 ## Step 2 — Create the database on Neon (5 min)
 
 1. Sign up at [neon.com](https://neon.com) — GitHub sign-in, no card.
-2. Create a project. Name it `agric`, and pick a region near your users;
+2. Create a project. Name it `aranfood`, and pick a region near your users;
    **Europe (Frankfurt)** pairs well with the Render region used below.
 3. On the project dashboard, copy the **connection string**. It looks like:
 
    ```
-   postgresql://agric_owner:npg_xxxxxxxx@ep-cool-name-123456.eu-central-1.aws.neon.tech/agric?sslmode=require&channel_binding=require
+   postgresql://aranfood_owner:npg_xxxxxxxx@ep-cool-name-123456.eu-central-1.aws.neon.tech/aranfood?sslmode=require&channel_binding=require
    ```
 
 Copy it **exactly as given**, including the `?sslmode=require&channel_binding=require`.
@@ -80,20 +80,20 @@ exist` errors under load rather than at startup.
 
 1. Sign up at [render.com](https://render.com) with GitHub — no card for the
    free tier.
-2. **New → Blueprint**, pick your `agric` repository. Render reads
-   `render.yaml` and offers to create `agric-api` and `agric-web`.
+2. **New → Blueprint**, pick your `aranfood` repository. Render reads
+   `render.yaml` and offers to create `aran-food-api` and `aran-food-web`.
 3. It will ask for the values marked "sync: false". Fill in what you can now:
 
    | Variable | Service | Value |
    |---|---|---|
-   | `DATABASE_URL` | agric-api | the Neon string from step 2 |
-   | `PAYSTACK_SECRET_KEY` | agric-api | leave **blank** (runs Paystack in mock mode) |
-   | `CORS_ORIGINS` | agric-api | `["https://agric-web.onrender.com"]` |
-   | `FRONTEND_URL` | agric-api | `https://agric-web.onrender.com` |
-   | `VITE_API_BASE_URL` | agric-web | `https://agric-api.onrender.com/api/v1` |
+   | `DATABASE_URL` | aran-food-api | the Neon string from step 2 |
+   | `PAYSTACK_SECRET_KEY` | aran-food-api | leave **blank** (runs Paystack in mock mode) |
+   | `CORS_ORIGINS` | aran-food-api | `["https://aran-food-web.onrender.com"]` |
+   | `FRONTEND_URL` | aran-food-api | `https://aran-food-web.onrender.com` |
+   | `VITE_API_BASE_URL` | aran-food-web | `https://aran-food-api.onrender.com/api/v1` |
 
    The last three depend on the URLs Render is about to assign. If your service
-   names got a suffix (because someone already has `agric-api`), use the real
+   names got a suffix (because someone already has `aran-food-api`), use the real
    URLs from each service's page and correct these in step 5.
 4. **Apply**. The API build takes ~3 minutes, the static site ~2.
 
@@ -102,13 +102,13 @@ exist` errors under load rather than at startup.
 `start.sh` has already created the admin account and the starter catalogue on
 first boot — you don't run anything.
 
-Open **agric-api → Environment** and copy the generated `SEED_ADMIN_PASSWORD`.
+Open **aran-food-api → Environment** and copy the generated `SEED_ADMIN_PASSWORD`.
 Your login is:
 
-- **Email:** `admin@agric.example` (or whatever you set `SEED_ADMIN_EMAIL` to)
+- **Email:** `admin@aranfood.example` (or whatever you set `SEED_ADMIN_EMAIL` to)
 - **Password:** the generated `SEED_ADMIN_PASSWORD`
 
-Check **agric-api → Logs**. A healthy first boot reads:
+Check **aran-food-api → Logs**. A healthy first boot reads:
 
 ```
 ==> Applying database migrations
@@ -122,9 +122,9 @@ INFO  [alembic.runtime.migration] Running upgrade  -> 4ee78057c86d, initial sche
 
 Open each service, copy its real `onrender.com` URL, and make sure:
 
-- `agric-api` → `CORS_ORIGINS` is `["<frontend URL>"]` and `FRONTEND_URL` is that
+- `aran-food-api` → `CORS_ORIGINS` is `["<frontend URL>"]` and `FRONTEND_URL` is that
   same URL without the brackets.
-- `agric-web` → `VITE_API_BASE_URL` is `<api URL>/api/v1`.
+- `aran-food-web` → `VITE_API_BASE_URL` is `<api URL>/api/v1`.
 
 Changing `VITE_API_BASE_URL` needs a rebuild of the static site to take effect —
 it's compiled into the bundle. Use **Manual Deploy → Deploy latest commit**.

@@ -1,4 +1,4 @@
-# Collective Agricultural Procurement & Food Distribution Platform — MVP
+# Aran Food Solutions — Collective Agricultural Procurement Platform (MVP)
 
 Households, individuals, and small food businesses place orders for agricultural
 commodities (rice, beans, garri, etc.). Orders are pooled into time-boxed
@@ -133,7 +133,7 @@ accepts, that in-process notification delivery actually delivers (including when
 the background task starts before the enqueuing transaction has committed), that
 `PENDING` notifications left by a dead process are swept up on startup, and —
 learned the hard way — that the **seeded admin can actually log in**. A seeded
-`admin@agric.local` writes to the database happily and is then rejected by
+`admin@aranfood.local` writes to the database happily and is then rejected by
 `EmailStr` at login, because `.local` is a reserved special-use name; nothing
 else in the suite would have caught an admin account that exists but can never
 authenticate.

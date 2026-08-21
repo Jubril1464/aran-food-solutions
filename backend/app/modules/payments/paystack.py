@@ -81,4 +81,4 @@ class PaystackClient:
 
 
 def generate_reference() -> str:
-    return f"agric_{uuid.uuid4().hex}"
+    return f"aran_{uuid.uuid4().hex}"

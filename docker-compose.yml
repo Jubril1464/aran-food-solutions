@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: agric
-      POSTGRES_PASSWORD: agric
-      POSTGRES_DB: agric
+      POSTGRES_USER: aranfood
+      POSTGRES_PASSWORD: aranfood
+      POSTGRES_DB: aranfood
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agric"]
+      test: ["CMD-SHELL", "pg_isready -U aranfood"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -30,7 +30,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://agric:agric@postgres:5432/agric
+      DATABASE_URL: postgresql+asyncpg://aranfood:aranfood@postgres:5432/aranfood
       REDIS_URL: redis://redis:6379/0
       # This compose file runs a dedicated arq worker, so use it rather than the
       # in-process default.
@@ -52,7 +52,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://agric:agric@postgres:5432/agric
+      DATABASE_URL: postgresql+asyncpg://aranfood:aranfood@postgres:5432/aranfood
       REDIS_URL: redis://redis:6379/0
       # This compose file runs a dedicated arq worker, so use it rather than the
       # in-process default.

@@ -5,11 +5,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "Agric Procurement Platform"
+    app_name: str = "Aran Food Solutions"
     environment: str = "development"
     api_prefix: str = "/api/v1"
 
-    database_url: str = "postgresql+asyncpg://agric:agric@localhost:5432/agric"
+    database_url: str = "postgresql+asyncpg://aranfood:aranfood@localhost:5432/aranfood"
     db_ssl_required: bool = False
 
     redis_url: str = "redis://localhost:6379/0"
@@ -61,7 +61,7 @@ class Settings(BaseSettings):
 
     # Email: "console" or "smtp"
     email_backend: str = "console"
-    email_from: str = "no-reply@agric.example"
+    email_from: str = "no-reply@aranfood.example"
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_username: str = ""
@@ -83,7 +83,7 @@ class Settings(BaseSettings):
     # LoginRequest would 422 before the password was even checked. .example is
     # reserved-but-accepted, so it works as an obvious placeholder. Set this to a
     # real address if you want password-reset email to reach you.
-    seed_admin_email: str = "admin@agric.example"
+    seed_admin_email: str = "admin@aranfood.example"
     seed_admin_password: str = ""
     seed_admin_phone: str = "+2348000000000"
     seed_demo_data: bool = True

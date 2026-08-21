@@ -22,7 +22,7 @@ def configure_logging() -> None:
     )
 
 
-logger = structlog.get_logger("agric")
+logger = structlog.get_logger("aranfood")
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):

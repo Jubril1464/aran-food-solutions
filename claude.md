@@ -1,4 +1,4 @@
-# Agric — Collective Agricultural Procurement Platform
+# Aran Food Solutions — Collective Agricultural Procurement Platform
 
 MVP for a Nigerian collective procurement platform: customers order commodities,
 orders pool into time-boxed procurement cycles, admin closes a cycle to trigger
