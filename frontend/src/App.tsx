@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { Navbar } from "./components/Navbar";
+import { DemoBanner } from "./components/DemoBanner";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 import { Login } from "./pages/Login";
@@ -28,6 +29,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <DemoBanner />
         <Navbar />
         <Routes>
           {/* Public */}

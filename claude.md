@@ -37,13 +37,22 @@ phase has changed; that boundary was a deliberate, explicit scope decision.
   boot (both idempotent) because a free tier has no one-off jobs or shell.
 - `DEPLOY.md` — the runbook, including the free-tier limits that actually bite.
 
+- `frontend/src/api/demo/` — demo mode: the entire API served from sample data in
+  the browser, switched on by `VITE_DEMO_MODE=true` and wired in at one point in
+  `src/api/client.ts`. It exists because the client demo had to ship before a
+  database was available. **It is a switch, not a fork** — don't let the two
+  paths diverge: a new endpoint the UI calls needs a handler in
+  `demo/backend.ts` too, or demo mode 404s at that screen.
+
 ## Deployment invariants
 
-Hosted on Render (native Python web service + static site) with Neon Postgres.
-**Deliberately no Docker and no AWS**: the user could not complete AWS payment
-verification, so the previous Terraform/Lambda deployment was removed — it is
-still in git history (`git log -- infra/`) if that ever changes. Don't
-reintroduce a container-based deploy path without being asked.
+Currently deployed as **the demo-mode frontend only** (`render.yaml`), because
+the user could complete neither AWS payment verification nor a standalone Neon
+signup. The full-stack blueprint is parked in `render.backend.yaml`, and the AWS
+Lambda/Terraform deployment before it is in git history (`git log -- infra/`).
+**Deliberately no Docker anywhere in any deploy path.** Don't reintroduce a
+container-based deploy, and don't delete the backend — it is tested and waiting
+on a database, not abandoned.
 
 - Notification transport is pluggable (`app/core/queue.py`): `in_process` (an
   asyncio task, the hosted default — no Redis, no second service, which is what

@@ -1,3 +1,5 @@
+import { callDemoBackend, DEMO_MODE } from "./demo";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 
 let accessToken: string | null = null;
@@ -35,6 +37,14 @@ function extractDetail(body: unknown): string {
 let refreshPromise: Promise<boolean> | null = null;
 
 async function refreshAccessToken(): Promise<boolean> {
+  if (DEMO_MODE) {
+    // Stands in for the httpOnly refresh cookie: demo mode remembers the signed-in
+    // user in localStorage, so a reload restores the session the same way.
+    const response = await callDemoBackend({ method: "POST", path: "/auth/refresh", token: null });
+    if (response.status !== 200) return false;
+    setAccessToken((response.body as { access_token: string }).access_token);
+    return true;
+  }
   if (!refreshPromise) {
     refreshPromise = fetch(`${API_BASE_URL}/auth/refresh`, {
       method: "POST",
@@ -62,6 +72,18 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, skipAuthRetry, headers, ...rest } = options;
   const isFormData = body instanceof FormData;
+
+  if (DEMO_MODE) {
+    const { status, body: payload } = await callDemoBackend({
+      method: (rest.method ?? "GET").toUpperCase(),
+      path,
+      body,
+      token: accessToken,
+    });
+    if (status === 204) return undefined as T;
+    if (status >= 400) throw new ApiError(status, extractDetail(payload));
+    return payload as T;
+  }
 
   const doFetch = async (): Promise<Response> =>
     fetch(`${API_BASE_URL}${path}`, {

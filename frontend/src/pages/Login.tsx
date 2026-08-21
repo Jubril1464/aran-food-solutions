@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import { ErrorBanner } from "../components/ErrorBanner";
+import { DEMO_CREDENTIALS, DEMO_MODE } from "../api/demo";
 
 export function Login() {
   const { login } = useAuth();
@@ -26,9 +27,38 @@ export function Login() {
     }
   };
 
+  // Fills the form rather than logging straight in, so whoever is watching sees
+  // which account is being used.
+  const fillDemoAccount = (account: { email: string; password: string }) => {
+    setEmail(account.email);
+    setPassword(account.password);
+    setError(null);
+  };
+
   return (
     <div className="mx-auto max-w-sm px-4 py-16">
       <h1 className="mb-6 text-2xl font-bold text-stone-900">Log in</h1>
+      {DEMO_MODE && (
+        <div className="mb-6 rounded-md border border-stone-200 bg-stone-50 p-3">
+          <p className="mb-2 text-xs font-medium text-stone-600">Demo accounts</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => fillDemoAccount(DEMO_CREDENTIALS.admin)}
+              className="flex-1 rounded border border-stone-300 bg-white px-2 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-100"
+            >
+              Administrator
+            </button>
+            <button
+              type="button"
+              onClick={() => fillDemoAccount(DEMO_CREDENTIALS.customer)}
+              className="flex-1 rounded border border-stone-300 bg-white px-2 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-100"
+            >
+              Customer
+            </button>
+          </div>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <ErrorBanner message={error} />
         <div>

@@ -34,28 +34,41 @@ routers only, with no tables, so the codebase boundary is ready for that phase.
 
 ## Deploying it
 
-Hosted on **Render + Neon**, both free, both without a credit card, and with no
-Docker anywhere in the process:
+Two deployables, and they are independent:
 
-| Piece | Where |
-|---|---|
-| API (FastAPI) | Render web service, native Python — `pip install` + `uvicorn`, straight from this repo |
-| Frontend (React) | Render static site — `npm run build`, served as plain files |
-| Database | Neon Postgres — its free tier is permanent, unlike Render's, which is deleted after 30 days |
+**The demo** — the frontend alone, on sample data, which is what you host to show
+someone. `VITE_DEMO_MODE=true` makes the app serve its own API from
+[`frontend/src/api/demo/`](frontend/src/api/demo/): the same catalogue the real
+backend seeds, with the real rules running (minimum order quantities, cycle
+resolution at checkout, the mock payment round trip, cycle-close aggregation) and
+populated admin screens. It needs no backend, no database, and no credit card —
+one free static site on Vercel or Render, deployed straight from this repo with
+zero configuration.
 
-Both services are declared in [`render.yaml`](render.yaml), so the deployment is
-created from this repo rather than by clicking through a dashboard.
-[`backend/start.sh`](backend/start.sh) applies migrations and ensures an admin
-account exists on every boot — both idempotent — so there is no separate release
-command to remember, which matters on a free tier with no one-off jobs.
+**The full stack** — the same frontend against the FastAPI backend and a Postgres
+database. [`render.backend.yaml`](render.backend.yaml) declares it: a native
+Python web service (no Docker) plus the static site, with
+[`backend/start.sh`](backend/start.sh) applying migrations and creating the first
+admin on boot, both idempotent. Parked only because it needs a database.
 
-**Full runbook, including the free-tier limitations that actually bite (the API
-sleeps after 15 minutes idle; uploaded images aren't persistent), is in
-[DEPLOY.md](DEPLOY.md).**
+**[DEPLOY.md](DEPLOY.md) is the runbook for both** — including what demo mode
+does and does not cover, and the four steps to switch it off later.
 
 ## Running it
 
-### Without Docker (recommended — matches how it's deployed)
+### Frontend only, on sample data (nothing else to run)
+
+```bash
+cd frontend
+npm install
+npm run dev      # http://localhost:5173
+```
+
+`frontend/.env` ships with `VITE_DEMO_MODE=true`, so the app serves itself from
+sample data — no Postgres, no API process. Set it to `false` for either option
+below.
+
+### Full stack, without Docker
 
 Backend:
 
