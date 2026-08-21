@@ -33,9 +33,9 @@ REFRESH_COOKIE_PATH = f"{settings.api_prefix}/auth"
 
 # SameSite=None is only honoured on a Secure cookie, and browsers silently drop
 # the whole Set-Cookie otherwise - so the two settings are resolved together
-# rather than left to be configured inconsistently. On AWS the frontend
-# (CloudFront) and the API (API Gateway) are different sites, so the cookie has
-# to be None/Secure or silent token refresh never receives it.
+# rather than left to be configured inconsistently. In the hosted deployment the
+# frontend and the API are on different hostnames, so the cookie has to be
+# None/Secure or silent token refresh never receives it.
 _SAMESITE = settings.refresh_cookie_samesite.lower()
 _COOKIE_SECURE = _SAMESITE == "none" or settings.environment != "development"
 

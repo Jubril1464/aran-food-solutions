@@ -15,20 +15,19 @@ class NotificationNotReady(Exception):
     """The notification row isn't visible yet - retry, don't drop.
 
     service.notify() enqueues on flush, inside the request's still-open
-    transaction, so a consumer can pick the job up before the commit lands.
-    On SQS that window is real (delivery is fast, and the API request may still
-    be finishing), so a missing row is treated as retryable rather than as a
-    reason to discard the message.
+    transaction, so a consumer can pick the job up before the commit lands. That
+    window is real for in-process delivery especially, where the background task
+    starts immediately - so a missing row is treated as retryable rather than as
+    a reason to discard the notification.
     """
 
 
 async def send_notification(ctx, notification_id: str) -> None:
     """Deliver one notification. Raises on failure so the queue retries it.
 
-    Both consumers rely on that: arq retries a raising job, and the SQS event
-    source mapping redelivers the message until maxReceiveCount sends it to the
-    DLQ. Swallowing the error here would instead delete the message and lose
-    the notification silently.
+    Both transports rely on that: arq retries a raising job, and the in-process
+    queue retries with backoff (app/core/queue.py). Swallowing the error here
+    would instead mark the attempt done and lose the notification silently.
     """
     async with AsyncSessionLocal() as db:
         notification = (

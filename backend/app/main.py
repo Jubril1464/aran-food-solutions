@@ -1,4 +1,3 @@
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -9,7 +8,8 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.core.config import get_settings
-from app.core.logging import RequestContextMiddleware, configure_logging
+from app.core.logging import RequestContextMiddleware, configure_logging, logger
+from app.core.queue import redeliver_pending
 from app.core.rate_limit import limiter
 from app.modules.analytics.router import router as analytics_router
 from app.modules.auth.router import router as auth_router
@@ -33,16 +33,24 @@ configure_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Sweep up notifications a previous process enqueued but never delivered.
+    # With in-process delivery a background task dies with its process, and a
+    # free-tier host stops the service whenever it goes idle, so this is what
+    # keeps "enqueued moments before a restart" from meaning "lost".
+    # Deliberately non-fatal: a database that isn't reachable yet must not stop
+    # the app from starting and reporting itself unhealthy.
+    try:
+        await redeliver_pending()
+    except Exception:
+        logger.exception("pending_notification_sweep_failed")
     yield
 
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
-# slowapi's default storage is in-process. On Lambda that means the limits are
-# enforced per execution environment rather than globally, so a burst spread
-# across cold starts can exceed them; it still blocks the single-client hammering
-# it's there for. A shared limiter would need Redis/ElastiCache, deliberately not
-# provisioned in this design (see infra/DEPLOY.md).
+# slowapi's default storage is in-process, so limits are per instance. That is
+# exactly right while this runs as a single web service, and would need a shared
+# Redis counter only if it were ever scaled out horizontally.
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -55,13 +63,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Local-disk uploads are a dev/docker-compose convenience only. On Lambda the
-# filesystem is read-only apart from /tmp and is discarded with the execution
-# environment, so serving uploads from it would be broken even if it mounted -
-# the deployment sets STORAGE_BACKEND=s3. Guarded (rather than assumed) because
-# StaticFiles raises at import time if the directory is missing, which would
-# turn a misconfigured env var into a function that fails to start at all.
-if settings.storage_backend == "local" and not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+# Uploaded files are served by the app itself when using local-disk storage.
+# The directory is created rather than assumed: StaticFiles raises at import time
+# if it's missing, which would turn a fresh checkout - or a host with an empty
+# filesystem - into an app that won't start at all.
+#
+# Note that on a host without a persistent disk, local uploads survive only until
+# the next deploy or restart. Point STORAGE_BACKEND at any S3-compatible bucket
+# to make them durable (see app/core/storage.py).
+if settings.storage_backend == "local":
     Path(settings.local_storage_path).mkdir(parents=True, exist_ok=True)
     app.mount(settings.local_storage_public_url, StaticFiles(directory=settings.local_storage_path), name="uploads")
 

@@ -76,11 +76,10 @@ async def upload_product_image(
     db: AsyncSession = Depends(get_db),
 ):
     content = await file.read()
-    # Rejected here with a clear error rather than at the gateway: API Gateway
-    # caps a request at 10 MB and Lambda at a 6 MB synchronous payload, and the
-    # body reaches the function base64-encoded (~33% larger), so an oversized
-    # upload otherwise dies upstream as an opaque 413/502 with nothing in the
-    # app's logs. See max_upload_size_mb in app/core/config.py.
+    # Rejected here with a clear, specific error rather than upstream: a hosting
+    # proxy enforces its own body limit and reports it as an opaque 413 or 502
+    # with nothing in the app's logs to explain it. See max_upload_size_mb in
+    # app/core/config.py.
     max_bytes = int(settings.max_upload_size_mb * 1024 * 1024)
     if len(content) > max_bytes:
         raise HTTPException(

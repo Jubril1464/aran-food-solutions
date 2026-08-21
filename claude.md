@@ -27,65 +27,48 @@ phase has changed; that boundary was a deliberate, explicit scope decision.
   touching checkout, payments, or procurement-cycle logic — it's what caught the
   cart identity-map staleness, decimal-quantization, and naive/aware-datetime bugs
   during the initial build.
-- `backend/tests/test_lambda_handlers.py` — the serverless regression suite; drives
-  the four Lambda entrypoints with synthetic API Gateway/SQS events in a
-  subprocess, because the behaviour it guards is decided at *import* time from
-  Lambda's environment. Re-run it after touching any of the handlers, the engine
-  setup, the queue abstraction, the storage backend, the refresh cookie, or the
-  seed data.
-- `backend/tests/test_lambda_package.py` — guards the deployment artifact without
-  needing AWS: pin drift between the two requirements files, a new third-party
-  import that isn't packaged, and arq/redis becoming reachable from a handler's
-  import graph. Cheap, and it fails at test time instead of on a cold start.
-- `infra/scripts/build-lambda-package.py` — builds `infra/build/{layer,app}.zip`
-  from any OS by having pip fetch Linux wheels; artifacts are byte-reproducible
-  on purpose, so Terraform doesn't redeploy unchanged functions.
-- `infra/` — Terraform for a fresh AWS account: **serverless** (four Lambda
-  functions behind API Gateway + SQS, RDS Postgres, S3 + CloudFront), chosen
-  deliberately over ECS Fargate for near-zero cost on a pitch-demo MVP — RDS is
-  publicly reachable (accepted trade-off, avoids a NAT gateway) with a random
-  password + server-side SSL enforcement, see `infra/DEPLOY.md`. Written and
-  `terraform validate`-clean but **never applied**. Don't run
-  `terraform apply`/`plan` against real credentials without the user explicitly
-  asking for that specific action; writing/editing the `.tf` files is fine,
-  provisioning billable infra is not a default action.
+- `backend/tests/test_deployment.py` — guards the hosting-specific pieces:
+  managed-Postgres URL normalisation, in-process notification delivery (the path
+  the rest of the suite mocks out), the startup sweep of PENDING notifications,
+  and that the seeded admin can actually log in. Re-run it after touching
+  `app/core/queue.py`, `app/core/database.py`, or the seed defaults.
+- `render.yaml` + `backend/start.sh` — the entire deployment. Render creates both
+  services from the blueprint; `start.sh` runs migrations and the seed on every
+  boot (both idempotent) because a free tier has no one-off jobs or shell.
+- `DEPLOY.md` — the runbook, including the free-tier limits that actually bite.
 
-## Serverless invariants (backend runs on Lambda)
+## Deployment invariants
 
-The API, notification worker, migration runner, and first-run bootstrap are
-Lambda functions sharing one zip artifact + dependency layer, built by
-`infra/scripts/build-lambda-package.py` (no Docker anywhere in the deploy); the
-entrypoints are `app/lambda_handler.py`, `app/notification_worker_handler.py`,
-`app/migration_handler.py`, and `app/seed_handler.py`. The same modules also run
-as a normal uvicorn process locally, so keep these separations intact rather
-than collapsing them:
+Hosted on Render (native Python web service + static site) with Neon Postgres.
+**Deliberately no Docker and no AWS**: the user could not complete AWS payment
+verification, so the previous Terraform/Lambda deployment was removed — it is
+still in git history (`git log -- infra/`) if that ever changes. Don't
+reintroduce a container-based deploy path without being asked.
 
-- `app/core/queue.py` is the pluggable notification-queue abstraction keeping
-  local dev on arq/Redis while `infra/` targets SQS — **don't collapse the two
-  paths.** Same for `app/core/storage.py` (local disk vs S3).
-- `app/core/database.py` switches to `NullPool` when `AWS_LAMBDA_FUNCTION_NAME`
-  is set. Don't "restore" pooling there: each invocation gets a fresh event loop
-  and a pooled asyncpg connection cannot cross that boundary. The Lambda
-  concurrency caps in `infra/terraform` exist because that makes concurrency the
-  database-connection count.
-- Settings must never be named after a variable the Lambda runtime injects
-  (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, …) — pydantic reads env vars
-  case-insensitively and would capture the execution role's credentials without
-  its session token. Hence `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY`; `aws_region`
-  reads `AWS_REGION` on purpose, which is safe and correct.
-- Anything the deployment needs from `backend/.env.example` also has to be set in
-  `infra/terraform/lambda.tf` — Lambda never reads that file.
-- `backend/requirements-lambda.txt` is the deployed subset of `requirements.txt`
-  (no uvicorn/arq/redis/boto3/test deps). `tests/test_lambda_package.py` fails if
-  a pin drifts between the two, if `app/` gains a third-party import that isn't
-  packaged, or if anything a handler imports pulls in arq/redis at module scope —
-  that last one is what makes excluding them safe, so keep those imports lazy.
-- Notification delivery is at-least-once: `send_notification` raises so the
-  consumer retries. Don't make it swallow exceptions "to stop the retries" —
-  that silently drops notifications and empties the DLQ of its purpose.
+- Notification transport is pluggable (`app/core/queue.py`): `in_process` (an
+  asyncio task, the hosted default — no Redis, no second service, which is what
+  makes one free instance enough) and `redis` (arq + a worker process, used by
+  `docker-compose.yml`). **Keep both paths working.** Requests must never wait on
+  delivery, whichever is selected.
+- `redeliver_pending()` runs at startup because an in-process task dies with its
+  process and free instances are stopped when idle. Without it, anything enqueued
+  just before a restart is lost.
+- `normalize_database_url()` in `app/core/database.py` is what lets a Neon/Supabase
+  connection string be pasted verbatim: it rewrites the scheme for asyncpg and
+  strips libpq-only parameters (`sslmode`, `channel_binding`) that would otherwise
+  raise a TypeError on the first query. Don't "simplify" it away.
+- The refresh cookie must stay `SameSite=None; Secure` in the hosted config: the
+  frontend and API are on different hostnames, so a Lax cookie is never sent and
+  silent refresh breaks on every page load.
+- `SEED_ADMIN_EMAIL` must never default to a `.local`/`.test` address. The seed
+  writes straight through the model, but login validates with `EmailStr`, which
+  rejects RFC 6761 special-use names — producing an admin that exists and cannot
+  authenticate. There is a regression test for exactly this.
+- Anything the deployment needs from `backend/.env.example` also has to be added
+  to `render.yaml` — Render never reads that file.
 - `/auth/register` creating only `CUSTOMER` is deliberate — don't add a role
-  parameter or an admin-signup route. `app/seed_handler.py` is the one path to
-  the first admin, and it must stay idempotent: it's a step people re-run.
+  parameter or an admin-signup route. `app/seed.py` is the one path to the first
+  admin, and it must stay idempotent: `start.sh` runs it on every boot.
 
 ## Known deliberate simplifications (see README "Architecture notes")
 

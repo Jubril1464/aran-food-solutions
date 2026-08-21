@@ -33,10 +33,10 @@ class S3StorageBackend(StorageBackend):
         client_kwargs: dict = {"region_name": settings.s3_region}
         if settings.s3_endpoint_url:
             client_kwargs["endpoint_url"] = settings.s3_endpoint_url
-        # Only pass static credentials when they were configured explicitly.
-        # On Lambda they are left blank so boto3 resolves the execution role
-        # (key + secret + session token) from the environment itself — see the
-        # note on s3_access_key_id in app/core/config.py.
+        # Only pass static credentials when they were configured explicitly, so
+        # that leaving them blank falls back to boto3's own resolution chain
+        # rather than authenticating as nobody - see the note on s3_access_key_id
+        # in app/core/config.py.
         if settings.s3_access_key_id:
             client_kwargs["aws_access_key_id"] = settings.s3_access_key_id
             client_kwargs["aws_secret_access_key"] = settings.s3_secret_access_key
@@ -55,8 +55,7 @@ class S3StorageBackend(StorageBackend):
 @lru_cache
 def get_storage_backend() -> StorageBackend:
     """Cached: building a boto3 client costs ~100-300ms (it parses botocore's
-    service JSON), which on Lambda would otherwise be paid on every upload
-    request rather than once per execution environment."""
+    service JSON), which would otherwise be paid on every upload request."""
     if settings.storage_backend == "s3":
         return S3StorageBackend()
     return LocalStorageBackend()

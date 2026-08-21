@@ -20,10 +20,11 @@ routers only, with no tables, so the codebase boundary is ready for that phase.
 ## Stack
 
 - **Backend:** FastAPI (modular monolith) + SQLAlchemy 2.0 (async) + PostgreSQL + Alembic
-- **Runtime:** AWS Lambda in the cloud (zip package + dependency layer, via
-  [Mangum](https://mangum.io/)), uvicorn locally — same code either way
-- **Background jobs:** Redis + [arq](https://arq-docs.helpmanual.io/) locally,
-  SQS + a consumer Lambda on AWS (notification delivery)
+- **Hosting:** Render (native Python web service + static site) + Neon Postgres —
+  no Docker, no containers, free tier
+- **Background jobs:** pluggable — an in-process background task by default,
+  or Redis + [arq](https://arq-docs.helpmanual.io/) with a dedicated worker
+  process (what `docker-compose.yml` runs)
 - **Frontend:** React + TypeScript (Vite) + Tailwind CSS
 - **Auth:** JWT access token (in-memory on the client) + refresh token in an httpOnly cookie
 - **Payments:** Paystack, with a built-in **mock mode** (see below) so the full
@@ -31,51 +32,30 @@ routers only, with no tables, so the codebase boundary is ready for that phase.
 - **Storage:** pluggable — local disk by default, S3-compatible via env var
 - **Email:** pluggable — logs to console by default, SMTP via env var
 
-## Deploying to AWS
+## Deploying it
 
-The backend runs **fully serverless on AWS Lambda** — no always-on server.
-Terraform for a fresh AWS account lives in [`infra/`](infra/): four Lambda
-functions sharing one zip artifact and one dependency layer, plus RDS Postgres
-and S3 + CloudFront for the frontend, built to run as close to zero recurring
-cost as possible for pitching rather than production traffic. **Deploying needs
-no Docker** — `infra/scripts/build-lambda-package.py` fetches Linux wheels with
-pip from any OS, and Terraform uploads the zips itself.
+Hosted on **Render + Neon**, both free, both without a credit card, and with no
+Docker anywhere in the process:
 
-| Function | Entrypoint | Triggered by |
-|---|---|---|
-| API | [`app/lambda_handler.py`](backend/app/lambda_handler.py) — Mangum → FastAPI | API Gateway HTTP API |
-| Notification worker | [`app/notification_worker_handler.py`](backend/app/notification_worker_handler.py) | SQS |
-| Migration runner | [`app/migration_handler.py`](backend/app/migration_handler.py) — `alembic upgrade head` | manual invoke, as a deploy step |
-| Bootstrap / seed | [`app/seed_handler.py`](backend/app/seed_handler.py) — first admin + starter catalogue | manual invoke, once after the first deploy |
+| Piece | Where |
+|---|---|
+| API (FastAPI) | Render web service, native Python — `pip install` + `uvicorn`, straight from this repo |
+| Frontend (React) | Render static site — `npm run build`, served as plain files |
+| Database | Neon Postgres — its free tier is permanent, unlike Render's, which is deleted after 30 days |
 
-The same code still runs as a normal uvicorn process for local development
-(`docker-compose.yml`), which is what the "Running it" section below uses —
-the Lambda-specific paths key off `AWS_LAMBDA_FUNCTION_NAME` and
-`QUEUE_BACKEND=sqs` rather than forking the codebase.
+Both services are declared in [`render.yaml`](render.yaml), so the deployment is
+created from this repo rather than by clicking through a dashboard.
+[`backend/start.sh`](backend/start.sh) applies migrations and ensures an admin
+account exists on every boot — both idempotent — so there is no separate release
+command to remember, which matters on a free tier with no one-off jobs.
 
-See [`infra/DEPLOY.md`](infra/DEPLOY.md) for the first-deploy runbook, what
-running on Lambda changes about the app (connection pooling, the cross-site
-refresh cookie, upload limits, at-least-once notifications, cold starts), the
-explicit cost/security trade-off it makes (a publicly-reachable database, to
-avoid a NAT gateway), and the cost breakdown. It's written and
-`terraform validate`-clean but has not been applied; provisioning real
-infrastructure is a deliberate step you take yourself.
+**Full runbook, including the free-tier limitations that actually bite (the API
+sleeps after 15 minutes idle; uploaded images aren't persistent), is in
+[DEPLOY.md](DEPLOY.md).**
 
 ## Running it
 
-### With Docker (recommended)
-
-```bash
-cp backend/.env.example backend/.env   # fill in secrets for anything beyond local dev
-cp frontend/.env.example frontend/.env
-docker compose up --build
-```
-
-This starts Postgres, Redis, the API (`http://localhost:8000`, docs at `/docs`),
-the arq notification worker, and the frontend (`http://localhost:5173`). The
-backend container runs `alembic upgrade head` before starting.
-
-### Without Docker
+### Without Docker (recommended — matches how it's deployed)
 
 Backend:
 
@@ -85,10 +65,12 @@ python -m venv .venv && .venv/Scripts/activate   # or source .venv/bin/activate 
 pip install -r requirements.txt
 cp .env.example .env   # point DATABASE_URL at a local Postgres, or see note below
 alembic upgrade head
+python -m app.seed     # creates the admin + starter catalogue (set SEED_ADMIN_PASSWORD first)
 uvicorn app.main:app --reload
-# in a second terminal, for notifications to actually send:
-arq app.worker.WorkerSettings
 ```
+
+Notifications are delivered by a background task in the same process, so there is
+nothing else to run.
 
 Frontend:
 
@@ -99,12 +81,26 @@ cp .env.example .env
 npm run dev
 ```
 
+### With Docker
+
+```bash
+cp backend/.env.example backend/.env   # fill in secrets for anything beyond local dev
+cp frontend/.env.example frontend/.env
+docker compose up --build
+```
+
+This starts Postgres, Redis, the API (`http://localhost:8000`, docs at `/docs`),
+a dedicated arq notification worker (`QUEUE_BACKEND=redis`), and the frontend
+(`http://localhost:5173`). The backend container runs `alembic upgrade head`
+before starting. Useful for exercising the queue-backed delivery path — the
+deployment itself uses no containers.
+
 > The backend targets Postgres in production (`DATABASE_URL=postgresql+asyncpg://...`),
 > but is fully portable to SQLite for quick local hacking without installing Postgres
 > (`DATABASE_URL=sqlite+aiosqlite:///./dev.db`) — the test suite runs entirely on
-> SQLite for this reason. Redis is required for any request that triggers a
-> notification (register, checkout, payment, cycle close) since those are enqueued
-> asynchronously rather than sent inline — there is no in-process fallback.
+> SQLite for this reason. Redis is only needed if you set `QUEUE_BACKEND=redis` to
+> run notification delivery through a separate arq worker; the default
+> (`in_process`) delivers in a background task and needs nothing extra.
 
 ### Paystack mock mode
 
@@ -131,21 +127,16 @@ order-state-machine flow including **webhook/verify idempotency** (replaying it
 doesn't double-apply), demand aggregation correctness, and the
 one-open-cycle-per-category rule.
 
-`tests/test_lambda_handlers.py` covers the serverless entrypoints by driving
-the real handlers with synthetic API Gateway and SQS events in a subprocess (a
-fresh process being the honest stand-in for a cold start, and re-invoking in it
-for a warm one): Mangum's event translation, a database query on a *warm*
-invocation, the cross-site refresh cookie, Lambda's injected AWS credentials not
-shadowing the S3 client's, `NullPool`, and SQS partial-batch-failure reporting —
-including that a failed send is retried rather than silently dropped. It also
-covers the bootstrap step: that seeding is idempotent, and that afterwards the
-admin can log in and the public catalogue isn't empty.
-
-`tests/test_lambda_package.py` guards the deployment package itself, with no AWS
-involved: that `requirements-lambda.txt` never disagrees with `requirements.txt`,
-that every third-party module `app/` imports will actually exist on Lambda, and
-that nothing a handler imports drags in `arq`/`redis` — the dependencies left out
-of the layer, which only stays safe while those imports remain lazy.
+`tests/test_deployment.py` covers what the hosted deployment adds: that a
+managed provider's connection string is rewritten into something asyncpg
+accepts, that in-process notification delivery actually delivers (including when
+the background task starts before the enqueuing transaction has committed), that
+`PENDING` notifications left by a dead process are swept up on startup, and —
+learned the hard way — that the **seeded admin can actually log in**. A seeded
+`admin@agric.local` writes to the database happily and is then rejected by
+`EmailStr` at login, because `.local` is a reserved special-use name; nothing
+else in the suite would have caught an admin account that exists but can never
+authenticate.
 
 ## Architecture notes
 
@@ -166,32 +157,31 @@ of the layer, which only stays safe while those imports remain lazy.
   terminal state (`successful`/`failed`) any further verify call — a duplicate
   webhook delivery, a manual retry — is a no-op.
 - **Notifications** are never sent inline: every trigger point persists a
-  `Notification` row and enqueues a job via a pluggable `NotificationQueue`
-  (`app/core/queue.py`) — arq/Redis by default (local dev, `docker-compose.yml`),
-  or SQS when `QUEUE_BACKEND=sqs` (the AWS Lambda deployment in `infra/`, where
-  a separate Lambda consumes the queue). Either way, delivery goes through a
-  pluggable `NotificationChannel` (console-log in dev, SMTP for real email;
-  SMS is stubbed for a future phase). Delivery is **at-least-once and
-  idempotent**: `send_notification` raises on failure so the consumer retries
-  (arq locally, SQS redelivery → DLQ on Lambda), and re-delivering an
-  already-sent notification is a no-op.
+  `Notification` row and enqueues delivery via a pluggable `NotificationQueue`
+  (`app/core/queue.py`). Two transports: `in_process` (default — an asyncio
+  background task, so no Redis and no second service, which is what lets the app
+  run on a single free instance) and `redis` (an arq queue with a dedicated
+  worker process, what `docker-compose.yml` runs). Delivery then goes through a
+  pluggable `NotificationChannel` (console-log in dev, SMTP for real email; SMS
+  is stubbed for a future phase). Delivery is **idempotent and retried**:
+  re-delivering an already-sent notification is a no-op, a not-yet-committed row
+  is retried rather than dropped, and anything left `PENDING` by a process that
+  died is swept up on the next startup (`redeliver_pending`).
 - **Audit log**: admin actions that change product price/availability, procurement
   cycle status, or order state are recorded in `admin_audit_log`.
 - **There is no self-service route to an admin account** — `/auth/register` only
   ever creates customers, by design. The first administrator is created by a
-  one-off bootstrap step (`app/seed_handler.py`, run as a Lambda on AWS), which
-  also seeds a starter catalogue and one open procurement cycle per category so
-  a fresh deployment is demonstrable rather than empty. It's idempotent, and
+  one-off bootstrap step (`app/seed.py`, run by `backend/start.sh` on every boot),
+  which also seeds a starter catalogue and one open procurement cycle per category
+  so a fresh deployment is demonstrable rather than empty. It's idempotent, and
   re-running it extends an expired order window.
-- **One codebase, two runtimes**: the same modules serve a long-running uvicorn
-  process and an AWS Lambda function. Where the two genuinely differ, the
-  difference is explicit and keyed off the environment rather than forked — a
-  `NullPool` engine when `AWS_LAMBDA_FUNCTION_NAME` is set (Lambda gives each
-  invocation a fresh event loop, which a pooled asyncpg connection cannot
-  survive), SQS instead of arq via `QUEUE_BACKEND`, S3 instead of local disk for
-  uploads, and a `SameSite=None` refresh cookie because CloudFront and API
-  Gateway are different sites. Each of these is spelled out in
-  [`infra/DEPLOY.md`](infra/DEPLOY.md#what-running-on-lambda-changes-about-the-app).
+- **Deployment-shaped details are configuration, not forks**: the same code runs
+  locally and hosted. `DATABASE_URL` is normalised so a managed provider's
+  connection string works as pasted (`postgresql://…?sslmode=require` becomes
+  asyncpg-safe — see `normalize_database_url`); the refresh cookie switches to
+  `SameSite=None` because the hosted frontend and API sit on different
+  hostnames; the notification transport and file storage are chosen by env var.
+  All of it is spelled out in [DEPLOY.md](DEPLOY.md).
 
 ## Deferred scope
 

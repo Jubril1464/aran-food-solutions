@@ -32,6 +32,9 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://agric:agric@postgres:5432/agric
       REDIS_URL: redis://redis:6379/0
+      # This compose file runs a dedicated arq worker, so use it rather than the
+      # in-process default.
+      QUEUE_BACKEND: redis
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,6 +54,9 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://agric:agric@postgres:5432/agric
       REDIS_URL: redis://redis:6379/0
+      # This compose file runs a dedicated arq worker, so use it rather than the
+      # in-process default.
+      QUEUE_BACKEND: redis
     depends_on:
       postgres:
         condition: service_healthy

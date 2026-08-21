@@ -1,7 +1,7 @@
 # Local development only. docker-compose.yml builds this to run the Vite dev
-# server alongside the backend; it is NOT how the frontend is deployed. The AWS
-# deployment builds a static bundle and serves it from S3 + CloudFront with no
-# container involved at all (infra/scripts/deploy-frontend.sh).
+# server alongside the backend; it is NOT how the frontend is deployed. The
+# deployment builds a static bundle with `npm run build` and serves the files
+# from Render, with no container involved at all (see render.yaml).
 FROM node:22-alpine
 
 WORKDIR /app

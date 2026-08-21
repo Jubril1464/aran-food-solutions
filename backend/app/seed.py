@@ -1,25 +1,28 @@
-"""Bootstrap Lambda entrypoint: creates the first admin user, and optionally a
-starter catalogue with an open procurement cycle.
+"""Bootstrap: creates the first admin user, and optionally a starter catalogue
+with an open procurement cycle.
 
-Invoked by hand once after the first deploy (and safely re-invokable):
+    python -m app.seed              # uses SEED_* environment variables
+    python -m app.seed --reset-password
+    python -m app.seed --no-demo-data
 
-    aws lambda invoke --function-name agric-prod-seed /dev/stdout
+Runs as part of the deploy start command (see render.yaml), and can be run by
+hand any time.
 
 Why this exists: /auth/register always creates a CUSTOMER, by design - there is
 no self-service route to an admin account and there shouldn't be. Without a
 bootstrap step a freshly deployed environment has no admin, so no products, no
 categories and no procurement cycle can be created, and the customer flow
 dead-ends on an empty catalogue. Rather than reaching into the database by hand,
-this runs the same models the app runs, in the same image.
+this runs the same models the app runs.
 
-Credentials come from the function's environment (set by
-infra/terraform/lambda.tf from `admin_email`/`admin_password`, the latter
-generated if not supplied) so no password is ever typed into a shell or passed
-in an invoke payload. The password is never logged or returned.
+Credentials come from the environment (SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD),
+never from command-line arguments, so the password stays out of shell history
+and process listings. It is never logged or printed.
 
-Everything here is idempotent: re-invoking promotes/repairs rather than
+Everything here is idempotent: re-running promotes/repairs rather than
 duplicating, and refreshes a demo cycle whose order window has expired - which
-is what makes it safe to re-run before a demo weeks later.
+is what makes it safe to run on every deploy, and to re-run before a demo weeks
+later.
 
 Deliberately NOT written to the admin audit log: this is a deployment
 bootstrap, not an action an administrator took in the app.
@@ -245,17 +248,19 @@ async def _seed_catalogue(db) -> dict:
     return counts
 
 
-async def _run(event: dict) -> dict:
-    email = event.get("admin_email") or settings.seed_admin_email
-    password = event.get("admin_password") or settings.seed_admin_password
-    phone = event.get("admin_phone") or settings.seed_admin_phone
-    demo_data = event.get("demo_data", settings.seed_demo_data)
-    reset_password = bool(event.get("reset_password", False))
+async def run(*, demo_data: bool | None = None, reset_password: bool = False) -> dict:
+    email = settings.seed_admin_email
+    password = settings.seed_admin_password
+    phone = settings.seed_admin_phone
+    demo_data = settings.seed_demo_data if demo_data is None else demo_data
 
     if not email:
-        raise ValueError("No admin email configured (set SEED_ADMIN_EMAIL or pass admin_email).")
+        raise SystemExit("SEED_ADMIN_EMAIL is not set - nothing to create.")
     if not password:
-        raise ValueError("No admin password configured (set SEED_ADMIN_PASSWORD or pass admin_password).")
+        raise SystemExit(
+            "SEED_ADMIN_PASSWORD is not set. Set it in the environment (never as a "
+            "command-line argument) and run again."
+        )
 
     async with AsyncSessionLocal() as db:
         admin_result = await _seed_admin(
@@ -267,16 +272,26 @@ async def _run(event: dict) -> dict:
     return {"status": "ok", "admin_email": email, "admin": admin_result, **catalogue}
 
 
-def handler(event, context):
-    """`event` may override the configured values:
-    {"admin_email", "admin_password", "admin_phone", "demo_data", "reset_password"}.
-    Note that an invoke payload is visible in your shell history, so prefer the
-    Terraform-managed environment for the password.
-    """
+def main(argv: list[str] | None = None) -> int:
+    import argparse
     import asyncio
 
+    parser = argparse.ArgumentParser(description="Create the first admin user and starter data.")
+    parser.add_argument("--no-demo-data", action="store_true",
+                        help="Create only the admin account, no categories/products/cycles.")
+    parser.add_argument("--reset-password", action="store_true",
+                        help="If the admin already exists, reset its password to SEED_ADMIN_PASSWORD.")
+    args = parser.parse_args(argv)
+
     configure_logging()
-    result = asyncio.run(_run(event or {}))
+    result = asyncio.run(run(
+        demo_data=False if args.no_demo_data else None,
+        reset_password=args.reset_password,
+    ))
     # Logs the outcome, never the credential.
     logger.info("seed_completed", **result)
-    return result
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

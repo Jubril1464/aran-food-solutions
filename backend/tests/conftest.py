@@ -26,6 +26,22 @@ async def _fake_notifications(monkeypatch):
     )
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    """Clear the rate-limit counters between tests.
+
+    slowapi keeps them in process memory, and every test hits the API from the
+    same client address - so without this, the login attempts made by one test
+    count against the next one, and a test late in the run fails with a 429 that
+    has nothing to do with what it was checking.
+    """
+    from app.core.rate_limit import limiter
+
+    limiter.reset()
+    yield
+    limiter.reset()
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def _reset_db():
     async with engine.begin() as conn:

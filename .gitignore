@@ -11,13 +11,4 @@ node_modules/
 frontend/dist/
 frontend/.env
 
-.terraform/
-infra/build/
-*.tfstate
-*.tfstate.*
-*.tfvars
-!*.tfvars.example
-crash.log
-crash.*.log
-
 .DS_Store
